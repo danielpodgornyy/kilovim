@@ -68,6 +68,7 @@ typedef struct erow {
   int idx;
   int size;
   int rsize;
+  int linenum_size;
   char *chars;
   char *render;
   unsigned char *hl;
@@ -121,6 +122,7 @@ struct editorSyntax HLDB[] = {
 void editorSetStatusMessage(const char *fmt, ...);
 void editorRefreshScreen();
 char *editorPrompt(char *prompt, void (*callback)(char *, int));
+void editorMoveCursor(int key);
 
 /*** terminal ***/
 
@@ -738,6 +740,7 @@ void editorScroll() {
   if (E.rx < E.coloff) {
     E.coloff = E.rx;
   }
+
   if (E.rx >= E.coloff + E.screencols) {
     E.coloff = E.rx - E.screencols + 1;
   }
@@ -747,6 +750,7 @@ void editorDrawRows(struct abuf *ab) {
   int y;
   for (y = 0; y < E.screenrows; y++) {
     int filerow = y + E.rowoff;
+
     if (filerow >= E.numrows) {
       if (E.numrows == 0 && y == E.screenrows / 3) {
         char welcome[80];
@@ -764,11 +768,25 @@ void editorDrawRows(struct abuf *ab) {
         abAppend(ab, "~", 1);
       }
     } else {
+      
+      int rownumLen = 0;
+
+      if (E.numrows) {
+        //Append the row num
+        char rownum[12]; 
+        rownumLen = snprintf(rownum, sizeof(rownum), " %d ", filerow + 1);
+        abAppend(ab, rownum, rownumLen);
+          
+        E.row[filerow].linenum_size = rownumLen;
+      }
+      
       int len = E.row[filerow].rsize - E.coloff;
       if (len < 0) len = 0;
-      if (len > E.screencols) len = E.screencols;
+      if (len > E.screencols - rownumLen) len = E.screencols - rownumLen;
+
       char *c = &E.row[filerow].render[E.coloff];
       unsigned char *hl = &E.row[filerow].hl[E.coloff];
+
       int current_color = -1;
       int j;
       for (j = 0; j < len; j++) {
@@ -851,8 +869,14 @@ void editorRefreshScreen() {
   editorDrawMessageBar(&ab);
 
   char buf[32];
-  snprintf(buf, sizeof(buf), "\x1b[%d;%dH", (E.cy - E.rowoff) + 1,
-                                            (E.rx - E.coloff) + 1);
+
+  int linenum_size = E.cy < E.numrows ? E.row[E.cy].linenum_size : 0;
+
+  int cy = E.cy - E.rowoff;
+  int cx = (E.rx - E.coloff + linenum_size < E.screencols) ? E.rx - E.coloff + linenum_size : E.screencols;
+
+  snprintf(buf, sizeof(buf), "\x1b[%d;%dH", cy + 1,
+                                            cx + 1);
   abAppend(&ab, buf, strlen(buf));
 
   abAppend(&ab, "\x1b[?25h", 6);
