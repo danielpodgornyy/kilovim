@@ -734,15 +734,17 @@ void editorScroll() {
   if (E.cy < E.rowoff) {
     E.rowoff = E.cy;
   }
+
   if (E.cy >= E.rowoff + E.screenrows) {
     E.rowoff = E.cy - E.screenrows + 1;
   }
+
   if (E.rx < E.coloff) {
     E.coloff = E.rx;
   }
 
-  if (E.rx >= E.coloff + E.screencols) {
-    E.coloff = E.rx - E.screencols + 1;
+  if (E.rx >= E.coloff + E.screencols - 3) {
+    E.coloff = E.rx - E.screencols + 1 + 3;
   }
 }
 
@@ -1080,8 +1082,7 @@ int main(int argc, char *argv[]) {
     editorOpen(argv[1]);
   }
 
-  editorSetStatusMessage(
-    "HELP: Ctrl-S = save | Ctrl-Q = quit | Ctrl-F = find");
+  editorSetStatusMessage("HELP: Ctrl-S = save | Ctrl-Q = quit | Ctrl-F = find");
 
   while (1) {
     editorRefreshScreen();
